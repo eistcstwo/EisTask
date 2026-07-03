@@ -1,7 +1,7 @@
-// App.jsx - Supports both endpoints
+// App.jsx - Supports both endpoints with fixed btn-ghost visibility
 
 import { useState, useCallback, useRef, useEffect } from "react";
-import "./styles.css";
+import "./App.css";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const GET_ALL_IPS_URL = "https://10.191.171.12:5443/EISHOME/prDrSync/getAllIps/";
@@ -42,6 +42,7 @@ const DARK = {
   inputBg: "#0d1120",
   headerBg: "#0a0d18",
   shadowColor: "rgba(0,0,0,0.6)",
+  hoverBg: "rgba(255,255,255,0.06)", // Added for button hover
 };
 
 const LIGHT = {
@@ -72,6 +73,7 @@ const LIGHT = {
   inputBg: "#f5f7fd",
   headerBg: "#ffffff",
   shadowColor: "rgba(0,0,0,0.08)",
+  hoverBg: "rgba(0,0,0,0.04)", // Added for button hover
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -347,7 +349,7 @@ function EntryList({ items, type, collapsed, onToggle, C, title = "entries" }) {
           </div>
           <div style={{ fontSize: 12, color: C.textSub, lineHeight: 1.5 }}>{heading}</div>
         </div>
-        <button className="btn btn-ghost" style={{ padding: "4px 11px", fontSize: 11 }} onClick={onToggle}>
+        <button className="btn btn-ghost" style={{ padding: "4px 11px", fontSize: 11, color: C.text, borderColor: C.border }} onClick={onToggle}>
           {collapsed ? "SHOW" : "HIDE"}
         </button>
       </div>
@@ -423,7 +425,7 @@ function PropertyMismatchList({ items, collapsed, onToggle, C, isDark, title = "
             Values differ between PR and DR — manual reconciliation required
           </div>
         </div>
-        <button className="btn btn-ghost" style={{ padding: "4px 11px", fontSize: 11 }} onClick={onToggle}>
+        <button className="btn btn-ghost" style={{ padding: "4px 11px", fontSize: 11, color: C.text, borderColor: C.border }} onClick={onToggle}>
           {collapsed ? "SHOW" : "HIDE"}
         </button>
       </div>
@@ -577,7 +579,7 @@ function DetailModal({ pair, result, onClose, C, isDark }) {
               )}
             </div>
           </div>
-          <button className="btn btn-ghost" onClick={onClose} style={{ padding: "5px 10px", fontSize: 16, lineHeight: 1 }}>✕</button>
+          <button className="btn btn-ghost" onClick={onClose} style={{ padding: "5px 10px", fontSize: 16, lineHeight: 1, color: C.text, borderColor: C.border }}>✕</button>
         </div>
         <div className="mb">
           {result?.error && (
@@ -682,7 +684,7 @@ function DetailModal({ pair, result, onClose, C, isDark }) {
           )}
         </div>
         <div className="mf">
-          <button className="btn btn-ghost" onClick={onClose}>Close</button>
+          <button className="btn btn-ghost" onClick={onClose} style={{ color: C.text, borderColor: C.border }}>Close</button>
         </div>
       </div>
     </div>
@@ -737,7 +739,7 @@ function BootScreen({ status, error, onRetry, C }) {
               {GET_ALL_IPS_URL}
             </div>
           </div>
-          <button className="btn btn-primary" onClick={onRetry}>Retry</button>
+          <button className="btn btn-primary" onClick={onRetry} style={{ background: C.accent, color: "#fff" }}>Retry</button>
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
@@ -759,7 +761,9 @@ export default function App() {
   useEffect(() => {
     const root = document.documentElement;
     Object.entries(C).forEach(([key, value]) => {
-      root.style.setProperty(`--${key}-color`, value);
+      // Convert camelCase to kebab-case for CSS variables
+      const cssKey = key.replace(/([A-Z])/g, '-$1').toLowerCase();
+      root.style.setProperty(`--${cssKey}`, value);
     });
   }, [C]);
 
@@ -955,7 +959,7 @@ export default function App() {
           )}
           {isRunning
             ? <button className="btn btn-stop" style={{ background: C.redBg, color: C.red, border: `1px solid ${C.redBorder}` }} onClick={stopAll}>■ Stop</button>
-            : <button className="btn btn-primary" style={{ background: C.accent, boxShadow: `0 2px 8px ${isDark ? "rgba(79,142,247,0.3)" : "rgba(37,99,235,0.25)"}` }} onClick={runAll}>▶ Check All</button>
+            : <button className="btn btn-primary" style={{ background: C.accent, color: "#fff", boxShadow: `0 2px 8px ${isDark ? "rgba(79,142,247,0.3)" : "rgba(37,99,235,0.25)"}` }} onClick={runAll}>▶ Check All</button>
           }
         </div>
       </header>
