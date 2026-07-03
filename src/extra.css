@@ -1,4 +1,4 @@
-/* styles.css - Complete CSS extracted from the component */
+/* styles.css - Fixed btn-ghost visibility in dark mode */
 
 *,
 *::before,
@@ -219,10 +219,13 @@ body {
 .btn-ghost {
   background: transparent;
   border: 1px solid var(--border-color);
+  color: var(--text-color); /* Added: ensure text is visible */
 }
 
 .btn-ghost:hover:not(:disabled) {
   border-color: var(--border-mid-color);
+  color: var(--text-color); /* Added: keep text visible on hover */
+  background: var(--hover-bg);
 }
 
 .btn-stop {
