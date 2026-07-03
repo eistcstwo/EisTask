@@ -1,11 +1,12 @@
-// App.jsx - Main React component with all logic and inline styles removed
+// App.jsx - Supports both endpoints
 
 import { useState, useCallback, useRef, useEffect } from "react";
-import "./styles.css"; // Import the CSS file
+import "./styles.css";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const GET_ALL_IPS_URL = "https://10.191.171.12:5443/EISHOME/prDrSync/getAllIps/";
-const API_URL = "https://10.191.171.12:5443/EISHOME/prDrSync/checkSyncIPSpecific/";
+const CHECK_SYNC_URL = "https://10.191.171.12:5443/EISHOME/prDrSync/checkSyncIPSpecific/";
+const CERTIFICATES_URL = "https://10.191.171.12:5443/EISHOME/prDrSync/getServerCertificates/";
 
 const GROUPS = [
   { id: "a", label: "SUBSET A", sublabel: "10.188.24.x  /  10.177.40.x", prefix: "10.188.24." },
@@ -101,6 +102,27 @@ function getMismatches(data) {
   return diff?.property_mismatches ?? [];
 }
 
+// Parse certificate response
+function parseCertificateResponse(data) {
+  const missingInPr = data?.missing_in_pr || [];
+  const missingInDr = data?.missing_in_dr || [];
+  const mismatches = data?.property_mismatches || [];
+  
+  let status = "IN SYNC";
+  if (missingInPr.length > 0 || missingInDr.length > 0 || mismatches.length > 0) {
+    status = "NOT IN SYNC";
+  }
+  
+  return {
+    status,
+    differences: {
+      missing_in_env1: missingInPr,
+      missing_in_env2: missingInDr,
+      property_mismatches: mismatches
+    }
+  };
+}
+
 function parseEntry(str) {
   const arrowParts = str.split(" -> ");
   const first = arrowParts[0];
@@ -112,21 +134,27 @@ function parseEntry(str) {
 }
 
 function downloadCSV(pairs, results) {
-  const rows = [["PR IP", "DR IP", "Status", "Missing in DR", "Missing in PR", "Property Mismatches", "Error", "Checked At"]];
+  const rows = [["PR IP", "DR IP", "Status", "Missing in DR", "Missing in PR", "Property Mismatches", "Certificate Missing in DR", "Certificate Missing in PR", "Certificate Mismatches", "Error", "Checked At"]];
   for (const p of pairs) {
     const r = results[p.id];
     if (!r) {
-      rows.push([p.pr, p.dr, "PENDING", "", "", "", "", ""]);
+      rows.push([p.pr, p.dr, "PENDING", "", "", "", "", "", "", "", ""]);
       continue;
     }
-    const d = getDiff(r.data);
-    const mm = getMismatches(r.data);
+    const d = getDiff(r.data?.syncData);
+    const mm = getMismatches(r.data?.syncData);
+    const certDiff = r.data?.certData ? getDiff(r.data.certData) : null;
+    const certMismatches = r.data?.certData ? getMismatches(r.data.certData) : [];
+    
     rows.push([
       p.pr, p.dr,
       r.loading ? "CHECKING" : r.error ? "ERROR" : (r.data?.status || ""),
       d?.missing_in_env2?.length ?? "",
       d?.missing_in_env1?.length ?? "",
       mm.length,
+      certDiff?.missing_in_env2?.length ?? "",
+      certDiff?.missing_in_env1?.length ?? "",
+      certMismatches.length,
       r.error || "",
       r.timestamp || ""
     ]);
@@ -190,17 +218,23 @@ function ThemeToggle({ isDark, onToggle }) {
 // Server Card Component
 function ServerCard({ pair, result, onClick, C }) {
   const state = cardState(result);
-  const diff = getDiff(result?.data);
-  const mismatches = getMismatches(result?.data);
+  const diff = getDiff(result?.data?.syncData);
+  const mismatches = getMismatches(result?.data?.syncData);
+  const certDiff = getDiff(result?.data?.certData);
+  const certMismatches = getMismatches(result?.data?.certData);
+  
   const diffCount = diff ? (diff.missing_in_env2?.length || 0) + (diff.missing_in_env1?.length || 0) : 0;
   const mismatchCount = mismatches.length;
+  const certDiffCount = certDiff ? (certDiff.missing_in_env2?.length || 0) + (certDiff.missing_in_env1?.length || 0) : 0;
+  const certMismatchCount = certMismatches.length;
+  
+  const totalIssues = diffCount + mismatchCount + certDiffCount + certMismatchCount;
 
   let cardCls = "sc";
   if (state === "synced") cardCls += " synced";
   if (state === "drifted") cardCls += " drifted";
   if (state === "errored") cardCls += " errored";
 
-  // Apply theme colors via inline styles
   const cardStyle = {
     border: `1px solid ${C.border}`,
     background: C.card,
@@ -255,18 +289,22 @@ function ServerCard({ pair, result, onClick, C }) {
           <span style={{ fontSize: 11, color: C.textSub, fontFamily: "'SF Mono', 'Fira Code', monospace" }}>{pair.dr}</span>
         </div>
       </div>
-      {state === "drifted" && (diffCount > 0 || mismatchCount > 0) && (
+      {state === "drifted" && totalIssues > 0 && (
         <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 4 }}>
-          {diffCount > 0 && (
+          {(diffCount > 0 || mismatchCount > 0) && (
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <div style={{ width: 6, height: 6, borderRadius: "50%", background: C.red, boxShadow: `0 0 6px ${C.red}` }} />
-              <span style={{ fontSize: 11, color: C.red, fontWeight: 600 }}>{diffCount} missing entr{diffCount !== 1 ? "ies" : "y"}</span>
+              <span style={{ fontSize: 11, color: C.red, fontWeight: 600 }}>
+                {diffCount + mismatchCount} sync issue{diffCount + mismatchCount !== 1 ? "s" : ""}
+              </span>
             </div>
           )}
-          {mismatchCount > 0 && (
+          {(certDiffCount > 0 || certMismatchCount > 0) && (
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <div style={{ width: 6, height: 6, borderRadius: "50%", background: C.purple, boxShadow: `0 0 6px ${C.purple}` }} />
-              <span style={{ fontSize: 11, color: C.purple, fontWeight: 600 }}>{mismatchCount} propert{mismatchCount !== 1 ? "ies" : "y"} mismatched</span>
+              <span style={{ fontSize: 11, color: C.purple, fontWeight: 600 }}>
+                {certDiffCount + certMismatchCount} certificate issue{certDiffCount + certMismatchCount !== 1 ? "s" : ""}
+              </span>
             </div>
           )}
         </div>
@@ -281,7 +319,7 @@ function ServerCard({ pair, result, onClick, C }) {
 }
 
 // Entry List Component
-function EntryList({ items, type, collapsed, onToggle, C }) {
+function EntryList({ items, type, collapsed, onToggle, C, title = "entries" }) {
   if (!items || items.length === 0) return null;
   const isMissDR = type === "env2";
   const colorVal = isMissDR ? C.red : C.amber;
@@ -304,7 +342,7 @@ function EntryList({ items, type, collapsed, onToggle, C }) {
               {isMissDR ? "MISSING IN DR" : "MISSING IN PR"}
             </span>
             <span style={{ fontSize: 11, fontWeight: 700, color: colorVal, background: `${colorVal}18`, border: `1px solid ${colorVal}33`, borderRadius: 20, padding: "2px 9px" }}>
-              {items.length} {items.length === 1 ? "entry" : "entries"}
+              {items.length} {items.length === 1 ? title.slice(0, -1) : title}
             </span>
           </div>
           <div style={{ fontSize: 12, color: C.textSub, lineHeight: 1.5 }}>{heading}</div>
@@ -351,7 +389,7 @@ function EntryList({ items, type, collapsed, onToggle, C }) {
 }
 
 // Property Mismatch List Component
-function PropertyMismatchList({ items, collapsed, onToggle, C, isDark }) {
+function PropertyMismatchList({ items, collapsed, onToggle, C, isDark, title = "properties" }) {
   if (!items || items.length === 0) return null;
 
   function parseLocation(loc) {
@@ -378,11 +416,11 @@ function PropertyMismatchList({ items, collapsed, onToggle, C, isDark }) {
               background: `${C.purple}18`, border: `1px solid ${C.purple}33`,
               borderRadius: 20, padding: "2px 9px"
             }}>
-              {items.length} {items.length === 1 ? "property" : "properties"}
+              {items.length} {items.length === 1 ? title.slice(0, -1) : title}
             </span>
           </div>
           <div style={{ fontSize: 12, color: C.textSub, lineHeight: 1.5 }}>
-            Config values differ between PR and DR — manual reconciliation required
+            Values differ between PR and DR — manual reconciliation required
           </div>
         </div>
         <button className="btn btn-ghost" style={{ padding: "4px 11px", fontSize: 11 }} onClick={onToggle}>
@@ -491,18 +529,30 @@ function DetailModal({ pair, result, onClose, C, isDark }) {
   const [collapseDR, setCollapseDR] = useState(false);
   const [collapsePR, setCollapsePR] = useState(false);
   const [collapseMismatch, setCollapseMismatch] = useState(false);
+  const [collapseCertDR, setCollapseCertDR] = useState(false);
+  const [collapseCertPR, setCollapseCertPR] = useState(false);
+  const [collapseCertMismatch, setCollapseCertMismatch] = useState(false);
 
   const data = result?.data;
   const isSynced = data?.status === "IN SYNC";
-  const diff = getDiff(data);
-  const missDR = diff?.missing_in_env2 || [];
-  const missPR = diff?.missing_in_env1 || [];
-  const mismatches = getMismatches(data);
-  const totalDiff = missDR.length + missPR.length;
+  
+  // Sync data
+  const syncDiff = getDiff(data?.syncData);
+  const syncMissDR = syncDiff?.missing_in_env2 || [];
+  const syncMissPR = syncDiff?.missing_in_env1 || [];
+  const syncMismatches = getMismatches(data?.syncData);
+  const syncTotal = syncMissDR.length + syncMissPR.length + syncMismatches.length;
+  
+  // Certificate data
+  const certDiff = getDiff(data?.certData);
+  const certMissDR = certDiff?.missing_in_env2 || [];
+  const certMissPR = certDiff?.missing_in_env1 || [];
+  const certMismatches = getMismatches(data?.certData);
+  const certTotal = certMissDR.length + certMissPR.length + certMismatches.length;
+  
   const state = cardState(result);
   const barColor = state === "synced" ? C.green : state === "drifted" ? C.red : C.amber;
-
-  const totalIssues = totalDiff + mismatches.length;
+  const totalIssues = syncTotal + certTotal;
 
   return (
     <div className="overlay" style={{ background: isDark ? "rgba(0,0,0,0.85)" : "rgba(17,24,39,0.65)" }} onClick={e => e.target === e.currentTarget && onClose()}>
@@ -565,9 +615,8 @@ function DetailModal({ pair, result, onClose, C, isDark }) {
                   <span style={{ fontSize: 12, color: C.textMuted, fontWeight: 500 }}>issues found</span>
                 </div>
                 <div style={{ display: "flex", gap: 10, marginTop: 5, flexWrap: "wrap" }}>
-                  {missDR.length > 0 && <span style={{ fontSize: 11, color: C.red, fontWeight: 600 }}>↓ {missDR.length} in DR</span>}
-                  {missPR.length > 0 && <span style={{ fontSize: 11, color: C.amber, fontWeight: 600 }}>↑ {missPR.length} in PR</span>}
-                  {mismatches.length > 0 && <span style={{ fontSize: 11, color: C.purple, fontWeight: 600 }}>≠ {mismatches.length} mismatch{mismatches.length !== 1 ? "es" : ""}</span>}
+                  {syncTotal > 0 && <span style={{ fontSize: 11, color: C.red, fontWeight: 600 }}>⚙ {syncTotal} sync</span>}
+                  {certTotal > 0 && <span style={{ fontSize: 11, color: C.purple, fontWeight: 600 }}>🔐 {certTotal} cert</span>}
                 </div>
               </div>
             )}
@@ -581,17 +630,48 @@ function DetailModal({ pair, result, onClose, C, isDark }) {
             </div>
           )}
 
-          {!isSynced && diff && (
+          {!isSynced && (
             <>
-              <EntryList items={missDR} type="env2" collapsed={collapseDR} onToggle={() => setCollapseDR(v => !v)} C={C} />
-              <EntryList items={missPR} type="env1" collapsed={collapsePR} onToggle={() => setCollapsePR(v => !v)} C={C} />
-              <PropertyMismatchList
-                items={mismatches}
-                collapsed={collapseMismatch}
-                onToggle={() => setCollapseMismatch(v => !v)}
-                C={C}
-                isDark={isDark}
-              />
+              {/* Sync Section */}
+              {(syncMissDR.length > 0 || syncMissPR.length > 0 || syncMismatches.length > 0) && (
+                <div style={{ marginBottom: 24 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: C.text }}>⚙️ Configuration Sync</span>
+                    <span style={{ fontSize: 11, color: C.textMuted }}>— PR/DR configuration comparison</span>
+                  </div>
+                  <EntryList items={syncMissDR} type="env2" collapsed={collapseDR} onToggle={() => setCollapseDR(v => !v)} C={C} title="entries" />
+                  <EntryList items={syncMissPR} type="env1" collapsed={collapsePR} onToggle={() => setCollapsePR(v => !v)} C={C} title="entries" />
+                  <PropertyMismatchList
+                    items={syncMismatches}
+                    collapsed={collapseMismatch}
+                    onToggle={() => setCollapseMismatch(v => !v)}
+                    C={C}
+                    isDark={isDark}
+                    title="properties"
+                  />
+                </div>
+              )}
+
+              {/* Certificate Section */}
+              {(certMissDR.length > 0 || certMissPR.length > 0 || certMismatches.length > 0) && (
+                <div style={{ marginTop: 24, borderTop: `2px solid ${C.border}`, paddingTop: 20 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: C.purple }}>🔐 Certificate Sync</span>
+                    <span style={{ fontSize: 11, color: C.textMuted }}>— Certificate comparison between PR and DR</span>
+                  </div>
+                  <EntryList items={certMissDR} type="env2" collapsed={collapseCertDR} onToggle={() => setCollapseCertDR(v => !v)} C={C} title="certificates" />
+                  <EntryList items={certMissPR} type="env1" collapsed={collapseCertPR} onToggle={() => setCollapseCertPR(v => !v)} C={C} title="certificates" />
+                  <PropertyMismatchList
+                    items={certMismatches}
+                    collapsed={collapseCertMismatch}
+                    onToggle={() => setCollapseCertMismatch(v => !v)}
+                    C={C}
+                    isDark={isDark}
+                    title="properties"
+                  />
+                </div>
+              )}
+
               {totalIssues === 0 && (
                 <div style={{ background: C.redBg, border: `1px solid ${C.redBorder}`, borderRadius: 10, padding: "14px 18px" }}>
                   <div style={{ fontSize: 12, fontWeight: 700, color: C.red, letterSpacing: "0.05em", marginBottom: 5 }}>OUT OF SYNC — NO DIFF DETAIL</div>
@@ -729,19 +809,53 @@ export default function App() {
 
   async function checkPair(pair, signal) {
     updateResult(pair.id, { loading: true, error: null, data: null });
+    
     try {
-      const res = await fetch(API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ip1: pair.pr, ip2: pair.dr }),
-        signal,
+      // Call both endpoints in parallel
+      const [syncResponse, certResponse] = await Promise.all([
+        fetch(CHECK_SYNC_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ip1: pair.pr, ip2: pair.dr }),
+          signal,
+        }),
+        fetch(CERTIFICATES_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ip1: pair.pr, ip2: pair.dr }),
+          signal,
+        })
+      ]);
+
+      // Check both responses
+      if (!syncResponse.ok) throw new Error(`Sync API HTTP ${syncResponse.status}`);
+      if (!certResponse.ok) throw new Error(`Certificate API HTTP ${certResponse.status}`);
+
+      const syncData = await syncResponse.json();
+      const certData = await certResponse.json();
+
+      // Parse certificate data
+      const parsedCert = parseCertificateResponse(certData);
+
+      // Combine results
+      const combinedData = {
+        status: syncData.status === "IN SYNC" && parsedCert.status === "IN SYNC" ? "IN SYNC" : "NOT IN SYNC",
+        syncData: syncData,
+        certData: parsedCert
+      };
+
+      updateResult(pair.id, { 
+        loading: false, 
+        data: combinedData, 
+        timestamp: new Date().toLocaleString() 
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      updateResult(pair.id, { loading: false, data, timestamp: new Date().toLocaleString() });
     } catch (e) {
       if (e.name === "AbortError") return;
-      updateResult(pair.id, { loading: false, error: e.message, timestamp: new Date().toLocaleString() });
+      updateResult(pair.id, { 
+        loading: false, 
+        error: e.message, 
+        timestamp: new Date().toLocaleString() 
+      });
     }
   }
 
@@ -814,7 +928,6 @@ export default function App() {
 
   const activeGroup = GROUPS[subnetIdx];
 
-  // Apply colors via inline styles or CSS custom properties
   const headerStyle = { background: C.headerBg, borderBottom: `1px solid ${C.border}` };
   const statsStyle = { background: C.surface, borderBottom: `1px solid ${C.border}` };
   const filtersStyle = { background: C.surface, borderBottom: `1px solid ${C.border}` };
