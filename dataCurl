@@ -1,0 +1,9 @@
+[eisuser@eispr-prt1-01 ~]$ sudo su -
+Last login: Fri Jul  3 16:22:13 IST 2026 on pts/1
+[root@eispr-prt1-01 ~]# curl -k -X POST https://10.191.171.12:5443/EISHOME/prDrSync/getServerCertificates/ -H "Content-Type: application/json" -d '{"ip1":"10.188.24.113","ip2":"10.177.40.113"}'
+{"missing_in_pr": [], "missing_in_dr": [], "property_mismatches": []}[root@eispr-prt1-01 ~]#
+[root@eispr-prt1-01 ~]#
+[root@eispr-prt1-01 ~]#
+[root@eispr-prt1-01 ~]# curl -k -X POST https://10.191.171.12:5443/EISHOME/prDrSync/getServerCertificates/ -H "Content-Type: application/json" -d '{"ip1":"10.188.25.113","ip2":"10.177.41.113"}'
+{"missing_in_pr": [], "missing_in_dr": ["EndPoint_Public -> callback2_0.cer"], "property_mismatches": []}[root@eispr-prt1-01 ~]#
+[root@eispr-prt1-01 ~]#
