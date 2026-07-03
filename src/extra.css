@@ -1,0 +1,500 @@
+/* styles.css - Complete CSS extracted from the component */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: 'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Scrollbar styles */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  border-radius: 4px;
+}
+
+/* Animations */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -600px 0;
+  }
+  100% {
+    background-position: 600px 0;
+  }
+}
+
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+@keyframes cardPageIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes themeSwitch {
+  from {
+    opacity: 0.6;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Theme transition */
+.theme-transition,
+.theme-transition * {
+  transition: background-color 0.25s ease, border-color 0.25s ease, color 0.2s ease, box-shadow 0.25s ease !important;
+}
+
+.card-page-in {
+  animation: cardPageIn 0.22s ease forwards;
+}
+
+/* ── Server Cards ── */
+.sc {
+  border-radius: 10px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+  user-select: none;
+  padding: 14px 14px 12px 18px;
+}
+
+.sc:hover {
+  transform: translateY(-2px);
+}
+
+/* Card status variants - colors will be applied via JS */
+.sc.synced:hover {
+  border-color: rgba(0, 214, 143, 0.5);
+  box-shadow: 0 6px 24px rgba(0, 214, 143, 0.10);
+}
+
+.sc.drifted:hover {
+  border-color: rgba(255, 64, 96, 0.5);
+  box-shadow: 0 6px 24px rgba(255, 64, 96, 0.10);
+}
+
+.sc-bar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  border-radius: 10px 0 0 10px;
+}
+
+.sc-bar.synced {
+  box-shadow: 0 0 10px rgba(0, 214, 143, 0.4);
+}
+.sc-bar.drifted {
+  box-shadow: 0 0 10px rgba(255, 64, 96, 0.4);
+}
+.sc-bar.pending {
+  background: var(--border-color);
+}
+.sc-bar.loading {
+  animation: blink 1.2s ease infinite;
+}
+
+.sc-shimmer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: 10px;
+  background-size: 600px 100%;
+  animation: shimmer 1.6s infinite;
+}
+
+/* ── Status Labels ── */
+.slabel {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  border-radius: 5px;
+  padding: 3px 8px;
+  display: inline-block;
+  white-space: nowrap;
+  text-transform: uppercase;
+}
+
+.slabel.pending {
+  border: 1px solid var(--border-color);
+}
+
+/* ── Buttons ── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  border-radius: 7px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 8px 16px;
+  transition: all 0.14s ease;
+  flex-shrink: 0;
+}
+
+.btn:active {
+  transform: scale(0.97);
+}
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--accent-color);
+  color: #fff;
+}
+
+.btn-primary:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+.btn-ghost {
+  background: transparent;
+  border: 1px solid var(--border-color);
+}
+
+.btn-ghost:hover:not(:disabled) {
+  border-color: var(--border-mid-color);
+}
+
+.btn-stop {
+  border: 1px solid var(--red-border);
+}
+
+.btn-stop:hover {
+  background: rgba(255, 64, 96, 0.15);
+}
+
+.btn-csv {
+  border: 1px solid var(--green-border);
+}
+
+.btn-csv:hover {
+  background: rgba(0, 214, 143, 0.14);
+}
+
+/* ── Theme Toggle ── */
+.theme-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 24px;
+  padding: 4px 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.theme-toggle:hover {
+  border-color: var(--border-mid-color);
+}
+
+.tt-knob {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  transition: all 0.25s ease;
+  background: #fff;
+}
+
+.tt-label {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 0 4px;
+  letter-spacing: 0.04em;
+}
+
+/* ── Nav arrows ── */
+.car-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.15s;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.car-btn:hover:not(:disabled) {
+  border-color: var(--accent-color);
+}
+
+.car-btn:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* ── Subnet dots ── */
+.subnet-dot {
+  height: 3px;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: none;
+  flex-shrink: 0;
+}
+
+.subnet-dot.on {
+  width: 28px;
+}
+.subnet-dot.off {
+  width: 14px;
+}
+
+/* ── Filter pills ── */
+.fp {
+  border: 1px solid var(--border-color);
+  background: transparent;
+  border-radius: 6px;
+  padding: 5px 12px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.13s ease;
+  letter-spacing: 0.03em;
+}
+
+.fp:hover {
+  border-color: var(--border-mid-color);
+}
+
+.fp.on {
+  border-color: var(--accent-color);
+  color: #fff;
+}
+
+/* ── Search ── */
+.srch {
+  border: 1px solid var(--border-color);
+  border-radius: 7px;
+  padding: 7px 13px;
+  font-family: inherit;
+  font-size: 13px;
+  outline: none;
+  width: 190px;
+  transition: border 0.15s ease, box-shadow 0.15s ease;
+}
+
+.srch:focus {
+  border-color: var(--accent-color);
+}
+.srch::placeholder {
+  color: var(--text-muted-color);
+}
+
+/* ── Stat boxes ── */
+.stat {
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 12px 16px;
+  flex: 1;
+  min-width: 90px;
+}
+
+.pbar {
+  height: 3px;
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+
+.pfill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.6s ease;
+}
+
+/* ── Modal ── */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  backdrop-filter: blur(6px);
+}
+
+.modal {
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  width: 100%;
+  max-width: 880px;
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.mh {
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.mb {
+  padding: 20px 22px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.mf {
+  padding: 14px 22px;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+
+/* ── Diff entries ── */
+.diff-entry {
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* ── Mismatch entry ── */
+.mismatch-entry {
+  border: 1px solid var(--purple-border);
+  border-left: 3px solid var(--purple-color);
+  border-radius: 8px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.val-chip {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.val-pr {
+  border: 1px solid var(--green-border);
+}
+.val-dr {
+  border: 1px solid var(--red-border);
+}
+.val-empty {
+  color: var(--text-muted-color);
+  font-style: italic;
+}
+
+.spin-anim {
+  animation: spin 0.75s linear infinite;
+}
+
+/* ── Dividers ── */
+.section-divider {
+  height: 1px;
+  margin: 16px 0;
+}
+
+/* ── Boot ── */
+.boot-screen {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  z-index: 500;
+  animation: fadeIn 0.3s ease;
+}
